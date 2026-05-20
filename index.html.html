@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+<meta charset="UTF-8">
+<title>QuickThinking Series EPISODE 47</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#020617;
+  color:white;
+  text-align:center;
+}
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:15px;
+}
+.split{
+  display:flex;
+  gap:20px;
+}
+@media (max-width:768px){
+  .split{
+    flex-direction:column;
+  }
+}
+
+.left{
+  flex:2;
+}
+
+.right{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+}
+.right-options{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin:15px 0;
+}
+
+.right-options div{
+  padding:14px;
+  background:#1e293b;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:18px;
+}
+
+.right-options div:active{
+  transform:scale(0.97);
+  background:#3949ab;
+}
+img{
+  width:100%;
+  border-radius:12px;
+}
+.option{
+  display:block;
+  margin:12px 0;
+  padding:16px;
+  font-size:18px;
+  border-radius:12px;
+  background:#1e293b;
+  cursor:pointer;
+}
+.option:active{
+  transform:scale(0.97);
+  background:#3949ab;
+}
+.timer{
+  height:6px;
+  background:red;
+  margin-top:12px;
+  transition:width 1s linear;
+}
+.timer.hurry{
+  background:#ff0000;
+  animation:pulse 0.6s infinite;
+}
+@keyframes pulse{
+  0%{ transform:scaleY(1); }
+  50%{ transform:scaleY(1.6); }
+  100%{ transform:scaleY(1); }
+}
+button{
+  width:100%;
+  padding:15px;
+  font-size:18px;
+  border:none;
+  border-radius:12px;
+  background:#22c55e;
+  color:white;
+  margin-top:20px;
+}
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+<div id="app"></div>
+</div>
+<audio id="bgMusic" loop playsinline>
+  <source src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-12.mp3" type="audio/mpeg">
+</audio>
+<script>
+// ✅ SERVICE WORKER (safe)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js')
+    .then(() => console.log("SW Registered"))
+    .catch(err => console.log("SW error:", err));
+}
+// -------- DATA --------
+const slides = [
+{ img:"E47S1.png", answer:0, time:25 },
+{ img:"E47S2.png", answer:2, time:25 },
+{ img:"E47S3.png", answer:1, time:25 },
+{ img:"E47S4.png", answer:1, time:25 },
+{ img:"E47S5.png", answer:0, time:25 },
+{ img:"E47S6.png", answer:2, time:25 }
+];
+const explanations = [
+{ img:"E47S7.png", time:20 },
+{ img:"E47S8.png", time:20 },
+{ img:"E47S9.png", time:20 },
+{ img:"E47S10.png", time:20 },
+{ img:"E47S11.png", time:20 },
+{ img:"E47S12.png", time:20 }
+
+
+];
+
+// -------- VARIABLES --------
+let i = 0;
+let score = 0;
+let timer;
+let startTime = 0;
+let responseTimes = [];
+let userAnswers = new Array(slides.length).fill(null);
+let isPaused = false;
+let remainingTime = 0;
+// -------- AUDIO UNLOCK --------
+let soundEnabled = false;
+
+function enableSound(){
+
+  const music = document.getElementById("bgMusic");
+
+  if(!music){
+    alert("Audio element not found");
+    return;
+  }
+
+  music.volume = 0.3;
+  music.muted = false;
+
+  music.play()
+.then(()=>{
+   console.log("Music playing");
+})
+.catch((err)=>{
+   console.log(err);
+   alert("Music could not play");
+});
+
+  soundEnabled = true;
+
+  const btn = document.getElementById("soundBtn");
+
+  if(btn){
+    btn.innerHTML = "✅ Sound Enabled";
+    btn.style.background = "#16a34a";
+  }
+
+  console.log("Sound enabled");
+
+}
+
+document.getElementById("bgMusic").addEventListener("error", function(){
+  alert("Audio failed to load");
+});
+function volumeUp(){
+
+  const music = document.getElementById("bgMusic");
+
+  if(music.volume < 1){
+    music.volume += 0.05;
+  }
+
+}
+
+function volumeDown(){
+
+  const music = document.getElementById("bgMusic");
+
+  if(music.volume > 0){
+    music.volume -= 0.05;
+  }
+
+}
+
+function toggleMusic(){
+
+  const music = document.getElementById("bgMusic");
+
+  const btn = document.getElementById("musicToggleBtn");
+
+  if(music.paused){
+
+    music.play();
+
+    btn.innerHTML = "⏸ Pause Music";
+
+  } else {
+
+    music.pause();
+
+    btn.innerHTML = "▶ Resume Music";
+
+  }
+
+}
+
+// -------- INTRO --------
+
+// -------- INTRO --------
+function showIntro(){
+
+document.getElementById("app").innerHTML = `
+
+<h1>NEET QTQS ⚡</h1>
+<h2>(EPISODE 47)</h2
+<p>Test your speed & accuracy</p>
+
+<button id="soundBtn" onclick="enableSound()">
+🔊 Enable Sound
+</button>
+
+<button onclick="startQuiz()">
+Start Test
+</button>
+
+<button id="musicToggleBtn" onclick="toggleMusic()">
+⏸ Pause Music
+</button>
+
+<div style="display:flex; gap:10px; margin-top:20px;">
+
+<button onclick="volumeDown()">
+🔉 Volume -
+</button>
+
+<button onclick="volumeUp()">
+🔊 Volume +
+</button>
+
+</div>
+
+`;
+
+}
+// -------- START QUIZ --------
+function startQuiz(){
+
+  let music = document.getElementById("bgMusic");
+
+  if(music && soundEnabled){
+    music.play().catch(()=>{});
+  }
+
+  i = 0;
+  score = 0;
+  userAnswers.fill(null);
+  responseTimes = [];
+
+  showQuestion();
+}
+
+
+// -------- QUESTIONS --------
+function showQuestion(){
+
+if(i >= slides.length){
+  showScore();
+  return;
+}
+
+startTime = Date.now();
+
+let s = slides[i];
+
+document.getElementById("app").innerHTML = `
+<div class="split">
+
+  <div class="left">
+    <div><b>Q${i+1}/${slides.length}</b></div>
+    <img src="${s.img}">
+  </div>
+
+  <div class="right">
+    <p style="color:#f87171;">⏱ ${s.time} sec</p>
+
+    <div class="right-options">
+      <div onclick="select(0)">(1)</div>
+      <div onclick="select(1)">(2)</div>
+      <div onclick="select(2)">(3)</div>
+      <div onclick="select(3)">(4)</div>
+    </div>
+
+    <button onclick="manualNext()">NEXT ▶</button>
+    <button onclick="pauseTimer()">⏸ Pause</button>
+
+    <div class="timer" id="bar"></div>
+  </div>
+
+</div>
+`;
+
+
+startTimer(s.time, nextQuestion);
+}
+
+// -------- TIMER --------
+function startTimer(duration, callback){
+
+remainingTime = duration;
+isPaused = false;
+
+let bar = document.getElementById("bar");
+bar.style.width = "100%";
+
+clearInterval(timer);
+
+timer = setInterval(()=>{
+
+if(!isPaused){
+
+remainingTime--;
+
+if(bar){
+  bar.style.width = (remainingTime/duration)*100 + "%";
+  if(remainingTime <= 5){
+    bar.classList.add("hurry");
+  }
+}
+
+if(remainingTime <= 0){
+  clearInterval(timer);
+  callback();
+}
+
+}
+
+},1000);
+}
+
+// -------- PAUSE --------
+function pauseTimer(){
+
+isPaused = !isPaused;
+
+let music = document.getElementById("bgMusic");
+
+if(music){
+  if(isPaused){
+    music.pause();
+  } else {
+    music.play().catch(()=>{});
+  }
+}
+
+// update button text
+let btns = document.querySelectorAll("button");
+
+btns.forEach(btn=>{
+  if(btn.innerText.includes("Pause") || btn.innerText.includes("Resume")){
+    btn.innerText = isPaused ? "▶ Resume" : "⏸ Pause";
+  }
+});
+
+}
+// -------- SELECT --------
+function select(ans){
+
+if(userAnswers[i] !== null) return;
+
+let options = document.querySelectorAll('.right-options div');
+
+// highlight selected
+options[ans].style.background = "#22c55e";
+
+// disable all options (prevent further clicks)
+options.forEach(opt => {
+  opt.style.pointerEvents = "none";
+  opt.style.opacity = "0.7";
+});
+
+responseTimes[i] = (Date.now() - startTime)/1000;
+userAnswers[i] = ans;
+
+clearInterval(timer);
+
+// give user time to see selection
+setTimeout(nextQuestion, 1000);
+}
+// -------- NEXT --------
+function nextQuestion(){
+
+if(userAnswers[i] === slides[i].answer){
+  score += 4;
+} else if(userAnswers[i] !== null){
+  score -= 1;
+}
+
+i++;
+clearInterval(timer);
+showQuestion();
+}
+
+function manualNext(){
+clearInterval(timer);
+nextQuestion();
+}
+
+// -------- SCORE --------
+function showScore(){
+
+let totalTime = responseTimes.reduce((a,b)=>a+(b||0),0);
+let avgTime = (totalTime / slides.length).toFixed(2);
+
+// calculate stats
+let correct = 0;
+let wrong = 0;
+let unattempted = 0;
+
+for(let j=0; j<slides.length; j++){
+  if(userAnswers[j] === null){
+    unattempted++;
+  } else if(userAnswers[j] === slides[j].answer){
+    correct++;
+  } else {
+    wrong++;
+  }
+}
+
+let accuracy = ((correct / slides.length) * 100).toFixed(1);
+
+document.getElementById("app").innerHTML = `
+<h1>Score: ${score}</h1>
+
+<div style="margin-top:20px; text-align:left; background:#1e293b; padding:20px; border-radius:12px;">
+
+  <p><b>Total Questions:</b> ${slides.length}</p>
+  <p><b>✅ Correct:</b> ${correct}</p>
+  <p><b>❌ Wrong:</b> ${wrong}</p>
+  <p><b>⚪ Unattempted:</b> ${unattempted}</p>
+
+  <hr style="margin:15px 0; border-color:#334155;">
+
+  <p><b>🎯 Accuracy:</b> ${accuracy}%</p>
+  <p><b>⏱ Avg Time:</b> ${avgTime}s</p>
+  <p><b>⏳ Total Time:</b> ${totalTime.toFixed(1)}s</p>
+
+</div>
+
+<button onclick="showExplanations()">View Wrong Answers</button>
+`;
+}
+// -------- EXPLANATIONS --------
+let expIndex = 0;
+
+function showExplanations(){
+  expIndex = 0;
+
+  // move to first wrong answer
+  while(expIndex < slides.length && userAnswers[expIndex] === slides[expIndex].answer){
+    expIndex++;
+  }
+
+  showNextExplanation();
+}
+
+function showNextExplanation(){
+
+// skip correct answers
+while(expIndex < slides.length && userAnswers[expIndex] === slides[expIndex].answer){
+  expIndex++;
+}
+
+if(expIndex >= explanations.length){
+  document.getElementById("app").innerHTML = `
+  <h2>Done ✅</h2>
+  <button onclick="location.reload()">Restart</button>
+  `;
+  return;
+}
+
+let exp = explanations[expIndex];
+
+document.getElementById("app").innerHTML = `
+<div class="split">
+
+  <div class="left">
+    <img src="${exp.img}">
+  </div>
+
+  <div class="right">
+    <button onclick="manualNextExplanation()">NEXT ▶</button>
+    <button onclick="pauseTimer()">⏸ Pause</button>
+
+    <div class="timer" id="bar"></div>
+  </div>
+
+</div>
+`;
+
+startTimer(exp.time, ()=>{
+  expIndex++;
+  showNextExplanation();
+});
+}
+function manualNextExplanation(){
+clearInterval(timer);
+expIndex++;
+showNextExplanation();
+}
+
+// -------- INIT --------
+showIntro();
+
+
+
+
+ 
+</script>
+
+</body>
+</html>
